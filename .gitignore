@@ -1,0 +1,7 @@
+.idea/
+*~
+*.swp
+bin/
+lib/
+build*/
+cmake-build*/
