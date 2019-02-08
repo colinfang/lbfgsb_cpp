@@ -4,7 +4,7 @@
 ## Overview
 
 This is a thin wrapper around the original [Fortran
-L-BGSG-B routine v3.0](http://users.iems.northwestern.edu/~nocedal/lbfgsb.html)
+L-BFGS-B routine v3.0](http://users.iems.northwestern.edu/~nocedal/lbfgsb.html)
 
 - Lightweight & flexible abstraction.
 - Provided interface follows SciPy convention.
@@ -68,10 +68,11 @@ int main() {
 ## API
 
 - `minimize(F& func, T& x0, const double* lb, const double* ub, const int* bound_type)`
-    - `x0` is modified in-place.
-- `func(const T& x0, T& grad) -> fval`
-    - `grad` is modified in-place.
-- Accepted `T`
+    - `x0` will be updated with the optimal parameters.
+- `func(const T& x0, T& grad) -> double fval`
+    - Aim to optimize the return value.
+    - `grad` is required to be updated on each call.
+- Requirement from `T`
     - `T grad(x0)` must be able to initialize `grad`.
     - `T.data()` must return a pointer to the data.
     - So `std::array` & `std::vector` both work.
@@ -83,6 +84,7 @@ int main() {
 - Unlike SciPy, `max_iter` is defined by the fortran subroutine, not the number of times the subroutine is called.
     - The subroutine may be called multiple times for line searches in one iteration.
 - `OptimizeResult.warn_flag` returns 3 for `ABNORMAL_TERMINATION_IN_LNSRCH` instead of 2.
+- The Fortran subroutine SciPy uses has an additional parameter `maxls`.
 
 
 ## References
