@@ -71,10 +71,12 @@ namespace lbfgsb {
 
     /// All members should be const
     struct OptimizeResult {
-        double fval;
+        double f_opt;
         int warn_flag;
         unsigned int num_iters;
         unsigned int num_fun_calls;
+        double previous_fval;
+        double f_tol;
         double time_on_cauchy_points;
         double time_on_subspace_minimization;
         double time_on_line_search;
@@ -125,7 +127,7 @@ namespace lbfgsb {
                 std::fill_n(csave, N_CSAVE, ' ');
             }
 
-            inline int get_warn_flag(unsigned int num_iters, unsigned int num_fun_calls) {
+            int get_warn_flag(unsigned int num_iters, unsigned int num_fun_calls) {
                 if (strncmp(task, "CONV", 2) == 0) {
                     return 0;
                 } else if ((num_iters >= max_iter) || (num_fun_calls >= max_fun)) {
@@ -138,13 +140,13 @@ namespace lbfgsb {
             }
 
         public:
-            inline const char* get_task() const {
+            const char* get_task() const {
                 return task;
             }
 
-            /// Need to be called immediate after `minimize`.
+            /// `task` would be overridden by the next `minimize`.
             void print_optimize_result(const OptimizeResult& x) const {
-                std::cout << "fval: " << x.fval << '\n';
+                std::cout << "f_opt: " << x.f_opt << '\n';
                 std::cout << "task: " << string_from_fortran(task, N_TASK) << '\n';
                 std::cout << "warn_flag " << x.warn_flag << '\n';
                 std::cout << "num_fun_calls " << x.num_fun_calls << '\n';
@@ -152,6 +154,8 @@ namespace lbfgsb {
                 std::cout << "time spent on searching for Cauchy points " << x.time_on_cauchy_points << '\n';
                 std::cout << "time spent on subspace minimization " << x.time_on_subspace_minimization << '\n';
                 std::cout << "time spent on line search " << x.time_on_line_search << '\n';
+                std::cout << "f(x) in the previous iteration " << x.previous_fval << '\n';
+                std::cout << "factr * epsilon " << x.f_tol << '\n';
                 std::cout << std::endl;
             }
 
@@ -171,7 +175,7 @@ namespace lbfgsb {
                 T grad(x0);
 
                 set_char_array(task, "START");
-
+                unsigned int num_iters{0};
                 while (true) {
                     // std::cout << "task to do: " << string_from_fortran(task, N_TASK) << "--\n";
                     setulb_wrapper(
@@ -186,7 +190,8 @@ namespace lbfgsb {
                     } else if (strncmp(task, "NEW_X", 5) == 0) {
                         // Without `STOP`, fortran doesn't know we are going to stop.
                         // Hence no summary log.
-                        if (isave[29] >= static_cast<int>(max_iter)) {
+                        num_iters = isave[29];
+                        if (num_iters >= static_cast<int>(max_iter)) {
                             std::fill_n(task, N_TASK, ' ');
                             set_char_array(task, "STOP: TOTAL NO. of ITERATIONS REACHED LIMIT");
                         } else if (isave[33] >= static_cast<int>(max_fun)) {
@@ -198,10 +203,11 @@ namespace lbfgsb {
                     }
                 }
 
-                unsigned int num_iters = isave[29];
+
                 unsigned int num_fun_calls = isave[33];
+
                 int warn_flag = get_warn_flag(num_iters, num_fun_calls);
-                return {fval, warn_flag, num_iters, num_fun_calls, dsave[6], dsave[7], dsave[8]};
+                return {fval, warn_flag, num_iters, num_fun_calls, dsave[1], dsave[2], dsave[6], dsave[7], dsave[8]};
             }
     };
 }
