@@ -166,7 +166,7 @@ namespace lbfgsb {
             /// `T.data()` must return a pointer to the data.
             template<typename T, typename F>
             OptimizeResult minimize(
-                F& func, T& x0,
+                F&& func, T& x0,
                 const double* lb, const double* ub, const int* bound_type
             ) {
                 init();
@@ -185,7 +185,7 @@ namespace lbfgsb {
                         csave, lsave, isave, dsave
                     );
                     if (strncmp(task, "FG", 2) == 0) {
-                        fval = func(x0, grad);
+                        fval = std::forward<F>(func)(x0, grad);
 
                     } else if (strncmp(task, "NEW_X", 5) == 0) {
                         // Without `STOP`, fortran doesn't know we are going to stop.
