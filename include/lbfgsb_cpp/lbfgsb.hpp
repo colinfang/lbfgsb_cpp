@@ -175,7 +175,7 @@ namespace lbfgsb {
                 T grad(x0);
 
                 set_char_array(task, "START");
-                unsigned int num_iters{0};
+
                 while (true) {
                     // std::cout << "task to do: " << string_from_fortran(task, N_TASK) << "--\n";
                     setulb_wrapper(
@@ -190,8 +190,7 @@ namespace lbfgsb {
                     } else if (strncmp(task, "NEW_X", 5) == 0) {
                         // Without `STOP`, fortran doesn't know we are going to stop.
                         // Hence no summary log.
-                        num_iters = isave[29];
-                        if (num_iters >= static_cast<int>(max_iter)) {
+                        if (isave[29] >= static_cast<int>(max_iter)) {
                             std::fill_n(task, N_TASK, ' ');
                             set_char_array(task, "STOP: TOTAL NO. of ITERATIONS REACHED LIMIT");
                         } else if (isave[33] >= static_cast<int>(max_fun)) {
@@ -203,7 +202,7 @@ namespace lbfgsb {
                     }
                 }
 
-
+                unsigned int num_iters = isave[29];
                 unsigned int num_fun_calls = isave[33];
 
                 int warn_flag = get_warn_flag(num_iters, num_fun_calls);
