@@ -21,11 +21,11 @@ namespace lbfgsb {
     }
 
 
-    const std::size_t N_TASK{60};
-    const std::size_t N_CSAVE{60};
-    const std::size_t N_LSAVE{4};
-    const std::size_t N_ISAVE{44};
-    const std::size_t N_DSAVE{29};
+    constexpr std::size_t N_TASK{60};
+    constexpr std::size_t N_CSAVE{60};
+    constexpr std::size_t N_LSAVE{4};
+    constexpr std::size_t N_ISAVE{44};
+    constexpr std::size_t N_DSAVE{29};
 
 
     inline void setulb_wrapper(
