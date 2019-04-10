@@ -32,6 +32,8 @@ target_include_directories(
 set_target_properties(${PROJECT_NAME} PROPERTIES POSITION_INDEPENDENT_CODE TRUE)
 target_compile_features(${PROJECT_NAME} INTERFACE cxx_std_11)
 
+target_compile_options(${PROJECT_NAME} PRIVATE -frecursive)
+
 if (CMAKE_BUILD_TYPE MATCHES "Release")
 else ()
     target_compile_options(${PROJECT_NAME} PRIVATE -fcheck=all)

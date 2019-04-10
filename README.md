@@ -25,7 +25,7 @@ make install
 - `-DCMAKE_BUILD_TYPE=Release` - Fully optimized build.
 - `-DBUILD_SHARED_LIBS=ON` - Build a shared library instead (default is static with `-fPIC`).
 - `-DBUILD_EXAMPLE=ON` - Build example.
-
+- The underlying fortran subroutine is compiled with `-frecursive` to ensure thread-safety.
 
 ## Quick Start
 
