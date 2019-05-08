@@ -4,6 +4,8 @@
 #include <cassert>
 #include <vector>
 #include <cstring>
+#include <string>
+#include <chrono>
 
 
 namespace lbfgsb {
@@ -80,6 +82,36 @@ namespace lbfgsb {
         double time_on_cauchy_points;
         double time_on_subspace_minimization;
         double time_on_line_search;
+        bool max_iter_exceeded;
+        bool max_fun_exceeded;
+        bool time_limit_exceeded;
+        std::string task;
+        double time_spent_sec;
+
+        void print() const {
+            std::cout << "f_opt: " << f_opt << '\n';
+            std::cout << "task: " << task << '\n';
+            std::cout << "warn_flag " << warn_flag << '\n';
+            std::cout << "num_fun_calls " << num_fun_calls << '\n';
+            std::cout << "num_iters " << num_iters << '\n';
+            if (max_iter_exceeded) {
+                std::cout << "stop due to max_iter_exceeded" << '\n';
+            }
+            if (max_fun_exceeded) {
+                std::cout << "stop due to max_fun_exceeded" << '\n';
+            }
+            if (time_limit_exceeded) {
+                std::cout << "stop due to time_limit_exceeded" << '\n';
+            }
+            std::cout << "total time spent " << time_spent_sec << " sec\n";
+            std::cout << "time spent on searching for Cauchy points " << time_on_cauchy_points << '\n';
+            std::cout << "time spent on subspace minimization " << time_on_subspace_minimization << '\n';
+            std::cout << "time spent on line search " << time_on_line_search << '\n';
+            std::cout << "f(x) in the previous iteration " << previous_fval << '\n';
+            std::cout << "factr * epsilon " << f_tol << '\n';
+            std::cout << std::endl;
+        }
+
     };
 
 
@@ -94,6 +126,8 @@ namespace lbfgsb {
             // The subroutine may be called multiple times for line searches in one iteration.
             unsigned int max_iter{5000};
             unsigned int max_fun{15000};
+            // If <= 0, no limit.
+            double time_limit_sec{-1};
             // 1e12 for low accuracy; 1e7 for moderate accuracy; 10.0 for high accuracy
             double factr{1e7};
             // Stop when max{|proj g_i | i = 1, ..., n} <= pgtol
@@ -127,36 +161,9 @@ namespace lbfgsb {
                 std::fill_n(csave, N_CSAVE, ' ');
             }
 
-            int get_warn_flag(unsigned int num_iters, unsigned int num_fun_calls) {
-                if (strncmp(task, "CONV", 2) == 0) {
-                    return 0;
-                } else if ((num_iters >= max_iter) || (num_fun_calls >= max_fun)) {
-                    return 1;
-                } else if (strncmp(task, "ABNORMAL_TERMINATION_IN_LNSRCH", 30) == 0) {
-                    return 3;
-                } else {
-                    return 2;
-                }
-            }
-
         public:
             const char* get_task() const {
                 return task;
-            }
-
-            /// `task` would be overridden by the next `minimize`.
-            void print_optimize_result(const OptimizeResult& x) const {
-                std::cout << "f_opt: " << x.f_opt << '\n';
-                std::cout << "task: " << string_from_fortran(task, N_TASK) << '\n';
-                std::cout << "warn_flag " << x.warn_flag << '\n';
-                std::cout << "num_fun_calls " << x.num_fun_calls << '\n';
-                std::cout << "num_iters " << x.num_iters << '\n';
-                std::cout << "time spent on searching for Cauchy points " << x.time_on_cauchy_points << '\n';
-                std::cout << "time spent on subspace minimization " << x.time_on_subspace_minimization << '\n';
-                std::cout << "time spent on line search " << x.time_on_line_search << '\n';
-                std::cout << "f(x) in the previous iteration " << x.previous_fval << '\n';
-                std::cout << "factr * epsilon " << x.f_tol << '\n';
-                std::cout << std::endl;
             }
 
             /// `x0` is modified in-place.
@@ -169,10 +176,16 @@ namespace lbfgsb {
                 F&& func, T& x0,
                 const double* lb, const double* ub, const int* bound_type
             ) {
+                const auto start_time = std::chrono::steady_clock::now();
                 init();
                 // Reset fval;
                 double fval{0};
                 T grad(x0);
+
+                bool max_iter_exceeded{false};
+                bool max_fun_exceeded{false};
+                bool time_limit_exceeded{false};
+                int warn_flag{-1};
 
                 set_char_array(task, "START");
 
@@ -184,16 +197,35 @@ namespace lbfgsb {
                         wa.data(), iwa.data(), task, iprint,
                         csave, lsave, isave, dsave
                     );
-                    if (strncmp(task, "FG", 2) == 0) {
-                        fval = std::forward<F>(func)(x0, grad);
 
+                    if (strncmp(task, "FG", 2) == 0) {
+                        // Reference: driver3.f
+                        // Only terminate after at least 1 iter, otherwise x0 & fval is 0 somehow.
+                        if (time_limit_sec > 0 && isave[29] >= 1) {
+                            const auto stop_time = std::chrono::steady_clock::now();
+                            const std::chrono::duration<double> time_spent_sec{stop_time - start_time};
+                            if (time_spent_sec.count() > time_limit_sec) {
+                                time_limit_exceeded = true;
+                                warn_flag = 1;
+                                std::fill_n(task, N_TASK, ' ');
+                                set_char_array(task, "STOP: CPU EXCEEDING THE TIME LIMIT.");
+                                continue;
+                            }
+                        }
+                        fval = std::forward<F>(func)(x0, grad);
                     } else if (strncmp(task, "NEW_X", 5) == 0) {
                         // Without `STOP`, fortran doesn't know we are going to stop.
                         // Hence no summary log.
+                        // Custom termination condition
+                        // Reference: SciPy, driver2.f
                         if (isave[29] >= static_cast<int>(max_iter)) {
+                            max_iter_exceeded = true;
+                            warn_flag = 1;
                             std::fill_n(task, N_TASK, ' ');
                             set_char_array(task, "STOP: TOTAL NO. of ITERATIONS REACHED LIMIT");
                         } else if (isave[33] >= static_cast<int>(max_fun)) {
+                            max_fun_exceeded = true;
+                            warn_flag = 1;
                             std::fill_n(task, N_TASK, ' ');
                             set_char_array(task, "STOP: TOTAL NO. of f AND g EVALUATIONS EXCEEDS LIMIT");
                         }
@@ -202,11 +234,25 @@ namespace lbfgsb {
                     }
                 }
 
-                unsigned int num_iters = isave[29];
-                unsigned int num_fun_calls = isave[33];
+                if (warn_flag == -1) {
+                    if (strncmp(task, "CONV", 2) == 0) {
+                        warn_flag = 0;
+                    } else if (strncmp(task, "ABNORMAL_TERMINATION_IN_LNSRCH", 30) == 0) {
+                        warn_flag = 3;
+                    } else {
+                        warn_flag = 2;
+                    }
+                }
 
-                int warn_flag = get_warn_flag(num_iters, num_fun_calls);
-                return {fval, warn_flag, num_iters, num_fun_calls, dsave[1], dsave[2], dsave[6], dsave[7], dsave[8]};
+                const auto stop_time = std::chrono::steady_clock::now();
+                const std::chrono::duration<double> time_spent_sec{stop_time - start_time};
+
+                return {
+                    fval, warn_flag, static_cast<unsigned int>(isave[29]), static_cast<unsigned int>(isave[33]),
+                    dsave[1], dsave[2], dsave[6], dsave[7], dsave[8],
+                    max_iter_exceeded, max_fun_exceeded, time_limit_exceeded,
+                    string_from_fortran(task, N_TASK), time_spent_sec.count()
+                };
             }
     };
 }

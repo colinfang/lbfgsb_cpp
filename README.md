@@ -50,13 +50,13 @@ int main() {
 
     Optimizer optimizer{lb.size()};
     // Can adjust many optimization configs.
-    // E.g. `iprint`, `factr`, `pgtol`, `max_iter`, `max_fun`
+    // E.g. `iprint`, `factr`, `pgtol`, `max_iter`, `max_fun`, `time_limit_sec`
     optimizer.iprint = 1;
     std::array<double, 2> x0{2, 3};
     auto result = optimizer.minimize(
         get_objective, x0, lb.data(), ub.data(), bound_type.data()
     );
-    optimizer.print_optimize_result(result);
+    result.print();
     // (0.5, 1) => 0
     std::cout << "x0: (" << x0[0] << ", " << x0[1] << ")" << std::endl;
 
