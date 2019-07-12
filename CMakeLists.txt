@@ -1,10 +1,6 @@
 cmake_minimum_required(VERSION 3.10)
 project(lbfgsb_cpp CXX Fortran)
 
-file(MAKE_DIRECTORY ${PROJECT_SOURCE_DIR}/bin)
-file(MAKE_DIRECTORY ${PROJECT_SOURCE_DIR}/lib)
-set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${PROJECT_SOURCE_DIR}/bin)
-set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${PROJECT_SOURCE_DIR}/lib)
 
 option(BUILD_EXAMPLE "Build example" OFF)
 
