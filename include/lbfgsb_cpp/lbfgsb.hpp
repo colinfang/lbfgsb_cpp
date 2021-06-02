@@ -212,7 +212,9 @@ namespace lbfgsb {
                                 continue;
                             }
                         }
-                        fval = std::forward<F>(func)(x0, grad);
+                        // Should not use `std::forward` as it is called multiple times.
+                        // Should not preserve rvalue.
+                        fval = func(x0, grad);
                     } else if (strncmp(task, "NEW_X", 5) == 0) {
                         // Without `STOP`, fortran doesn't know we are going to stop.
                         // Hence no summary log.
