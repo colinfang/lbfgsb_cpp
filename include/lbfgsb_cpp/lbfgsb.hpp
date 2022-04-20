@@ -170,7 +170,7 @@ namespace lbfgsb {
             /// func(const T& x0, T& grad) -> fval
             /// `grad` is modified in-place.
             /// `T grad(x0)` must be able to initialize grad.
-            /// `T.data()` must return a pointer to the data.
+            /// `std::data(T&)` must return a pointer to the data.
             template<typename T, typename F>
             OptimizeResult minimize(
                 F&& func, T& x0,
@@ -192,8 +192,8 @@ namespace lbfgsb {
                 while (true) {
                     // std::cout << "task to do: " << string_from_fortran(task, N_TASK) << "--\n";
                     setulb_wrapper(
-                        n, m, x0.data(), lb, ub, bound_type,
-                        &fval, grad.data(), factr, pgtol,
+                        n, m, std::data(x0), lb, ub, bound_type,
+                        &fval, std::data(grad), factr, pgtol,
                         wa.data(), iwa.data(), task, iprint,
                         csave, lsave, isave, dsave
                     );
