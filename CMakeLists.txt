@@ -54,13 +54,17 @@ IF (BUILD_EXAMPLE)
     add_subdirectory(examples)
 ENDIF()
 
-
-install(
-    TARGETS ${PROJECT_NAME}
-    EXPORT ${PROJECT_NAME}_targets
-    LIBRARY DESTINATION "lib"
-    ARCHIVE DESTINATION "lib"
-)
+# Create install rule for your library. Use variables CMAKE_INSTALL_*DIR defined in GNUInstallDir
+include(GNUInstallDirs)
+# https://cmake.org/cmake/help/latest/command/install.html
+# https://pabloariasal.github.io/2018/02/19/its-time-to-do-cmake-right/
+install(TARGETS ${PROJECT_NAME}
+        EXPORT ${PROJECT_NAME}_targets
+        LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
+        ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR} COMPONENT devel
+        RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR} COMPONENT runtime
+        PUBLIC_HEADER DESTINATION ${CMAKE_INSTALL_INCLUDEDIR} COMPONENT devel
+        )
 
 install(FILES ${HEADERS} DESTINATION "include/${PROJECT_NAME}")
 
@@ -70,5 +74,6 @@ install(
     NAMESPACE ${PROJECT_NAME}::
     DESTINATION lib/cmake/${PROJECT_NAME}
 )
+
 
 
