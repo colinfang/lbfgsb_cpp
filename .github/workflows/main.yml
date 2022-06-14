@@ -19,9 +19,9 @@ jobs:
           - name: "macOS Debug"
             os: macOS-10.15
             mode: Debug
-    #          - name: "Windows Debug"
-    #            os: windows-2019
-    #            mode: Debug
+          - name: "Windows Debug"
+            os: windows-2019
+            mode: Debug
 
     steps:
       - uses: actions/checkout@v2
@@ -30,12 +30,11 @@ jobs:
       - uses: r-lib/actions/setup-r@v2
         with:
           r-version: '4.2'
-        if: runner.os != 'Linux'
 
       - name: Define local variables
         shell: bash
         run: |
-          echo "MODE=${{matrix.mode}}" >> $GITHUB_ENV
+          echo "MODE=${{matrix.mode}}"  >> $GITHUB_ENV
 
       - name: Explain current config
         shell: bash
@@ -54,6 +53,19 @@ jobs:
             echo "No make command found"
           fi
 
+      - name: Lbfgsb.3.0 build
+        shell: bash
+        run: |
+          set -x
+          mkdir build2 && cd build2
+          cmake \
+              -DCMAKE_Fortran_COMPILER="$(R CMD config FC | awk '{ print $1 }')" \
+              -G "Unix Makefiles" \
+              -DCMAKE_BUILD_TYPE="${MODE}" \
+              ../Lbfgsb.3.0
+          cmake --build .
+          cmake --build . --target install 
+
       - name: Configure
         shell: bash
         run: |
@@ -62,6 +74,7 @@ jobs:
           cmake -DBUILD_EXAMPLE=ON \
                 -DCMAKE_BUILD_TYPE="${MODE}" \
                 ..
+
       - name: Compile
         shell: bash
         run: |
