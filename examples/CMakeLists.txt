@@ -12,3 +12,5 @@ target_compile_options(
     -Wduplicated-branches
     -Wduplicated-cond
 )
+
+add_test(NAME example COMMAND example)
