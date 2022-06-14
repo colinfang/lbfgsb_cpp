@@ -53,6 +53,7 @@ endif ()
 
 
 IF (BUILD_EXAMPLE)
+    enable_testing()
     add_subdirectory(examples)
 ENDIF()
 
