@@ -10,7 +10,6 @@
 #include <array>
 #include <lbfgsb_cpp/lbfgsb.hpp>
 
-using namespace std;
 using namespace lbfgsb;
 
 
@@ -35,7 +34,7 @@ int main() {
     optimizer.iprint = 1;
     std::array<double, 2> x0{2, 3};
     auto result = optimizer.minimize(
-        get_objective, x0, lb.data(), ub.data(), bound_type.data()
+        get_objective, x0, data(lb), data(ub), bound_type.data()
     );
     result.print();
 

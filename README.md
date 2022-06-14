@@ -69,14 +69,20 @@ int main() {
 
 - `minimize(F& func, T& x0, const double* lb, const double* ub, const int* bound_type)`
     - `x0` will be updated with the optimal parameters.
+
 - `func(const T& x0, T& grad) -> double fval`
     - Aim to optimize the return value.
+
     - `grad` is required to be updated on each call.
+
 - Requirement from `T`
     - `T grad(x0)` must be able to initialize `grad`.
-    - `T.data()` must return a pointer to the data.
-    - So `std::array` & `std::vector` both work.
-
+  
+    - `data(T)` must return a pointer to the data.
+      
+      You can override it to extend the support of your container (ex: `arma::vec`).
+  
+    - C++17 provides `std::data` for usual containers like `std::array` & `std::vector`.
 
 ## Differences with SciPy
 
