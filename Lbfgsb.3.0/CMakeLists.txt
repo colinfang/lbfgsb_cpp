@@ -11,12 +11,69 @@ endif ()
 set(FORTRAN_SRC
     lbfgsb.f
     linpack.f
-    timer.f # fake timer for portability
+    timer.f
 )
-set(HEADERS "include/${PROJECT_NAME}/lbfgsb.h"
-)
+set(HEADERS "include/${PROJECT_NAME}/lbfgsb.h")
+
+if (NOT TARGET blas)
+    set(FORTRAN_SRC ${FORTRAN_SRC}
+            blas.f # Now uses external blas
+            )
+    message(WARNING "lbfgsb_cpp will use local implementation of blas functions")
+endif()
 
 add_library(${PROJECT_NAME} ${FORTRAN_SRC} ${HEADERS})
+
+set(FLIBS_LIST ${FLIBS})
+separate_arguments(FLIBS_LIST)
+
+#target_link_libraries(${PROJECT_NAME} "-Wl,--whole-archive")
+
+execute_process(COMMAND ${CMAKE_Fortran_COMPILER} -print-search-dirs
+        RESULT_VARIABLE HINT_RESULT
+        OUTPUT_VARIABLE HINT_OUTPUT
+        ERROR_VARIABLE HINT_ERROR
+        ERROR_QUIET
+        OUTPUT_STRIP_TRAILING_WHITESPACE
+        ERROR_STRIP_TRAILING_WHITESPACE)
+if (HINT_RESULT)
+    message(FATAL_ERROR "Cannot get default compiler search directory: ${HINT_ERROR}")
+endif()
+
+# requires CMake ≥3.9
+if (HINT_OUTPUT MATCHES "libraries: =(.*)")
+    # paths in CMAKE_MATCH_1
+    if (WIN32)
+        # still separate using ;
+        set(HINT_PATHS ${CMAKE_MATCH_1})
+    else()
+        string(REPLACE ":" ";" HINT_PATHS ${CMAKE_MATCH_1})
+    endif()
+else()
+    message(FATAL_ERROR "Cannot find default compiler search directory")
+endif()
+
+if (WIN32)
+    set(CMAKE_FIND_LIBRARY_SUFFIXES .a) # no .dll.a
+    list(APPEND FLIBS_LIST "-lgcc")
+endif()
+
+foreach(ITEM ${FLIBS_LIST})
+    message(STATUS "Processing external lib option: ${ITEM}")
+    string(SUBSTRING "${ITEM}" 0 2 SYMBOL)
+    string(SUBSTRING "${ITEM}" 2 -1 VALUE)
+    if (SYMBOL STREQUAL "-L")
+        list(APPEND HINT_PATHS "${VALUE}")
+        # Prefer full path link to prevent from adjustments (suffix,prefix,path) done MSVC when searching libs  
+        # target_link_directories(${PROJECT_NAME} PRIVATE "${VALUE}")
+    elseif (SYMBOL STREQUAL "-l")
+        find_library(LIB_${VALUE} NAMES ${VALUE} HINTS ${HINT_PATHS})
+        message(STATUS "Library ${VALUE} found at location ${LIB_${VALUE}}")
+        target_link_libraries(${PROJECT_NAME} PUBLIC "${LIB_${VALUE}}")
+    else()
+        message(FATAL_ERROR "Unknown option: ${ITEM}")
+    endif()
+endforeach()
 
 target_include_directories(
     ${PROJECT_NAME} INTERFACE
@@ -25,17 +82,23 @@ target_include_directories(
 )
 
 set_target_properties(${PROJECT_NAME} PROPERTIES POSITION_INDEPENDENT_CODE TRUE)
+target_compile_options(${PROJECT_NAME} PRIVATE -frecursive)
 
-install(
-    TARGETS ${PROJECT_NAME}
-    EXPORT ${PROJECT_NAME}_targets
-)
+# créer des variables de cache pour les destinations d'installation
+include(GNUInstallDirs)
 
-install(FILES ${HEADERS} DESTINATION "include/${PROJECT_NAME}")
+install(TARGETS ${PROJECT_NAME}
+        EXPORT ${PROJECT_NAME}Targets
+        LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
+        ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR} COMPONENT devel
+        RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR} COMPONENT runtime
+        PUBLIC_HEADER DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/${PROJECT_NAME} COMPONENT devel
+        )
 
-install(
-    EXPORT ${PROJECT_NAME}_targets
-    FILE ${PROJECT_NAME}Config.cmake
-    NAMESPACE ${PROJECT_NAME}::
-    DESTINATION lib/cmake/${PROJECT_NAME}
+install(FILES ${HEADERS} DESTINATION "${CMAKE_INSTALL_INCLUDEDIR}/${PROJECT_NAME}")
+
+install(EXPORT ${PROJECT_NAME}Targets
+        FILE ${PROJECT_NAME}Config.cmake
+        NAMESPACE ${PROJECT_NAME}::
+        DESTINATION lib/cmake/${PROJECT_NAME}
 )

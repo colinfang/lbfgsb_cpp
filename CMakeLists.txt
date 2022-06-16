@@ -1,15 +1,9 @@
 cmake_minimum_required(VERSION 3.10)
-project(lbfgsb_cpp CXX Fortran)
+project(lbfgsb_cpp CXX)
 
 set(CMAKE_CXX_STANDARD 17)
 
-file(MAKE_DIRECTORY ${PROJECT_SOURCE_DIR}/bin)
-file(MAKE_DIRECTORY ${PROJECT_SOURCE_DIR}/lib)
-#set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${PROJECT_SOURCE_DIR}/bin)
-#set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${PROJECT_SOURCE_DIR}/lib)
-
 option(BUILD_EXAMPLE "Build example" OFF)
-
 
 set(
     FORTRAN_SRC
@@ -22,33 +16,29 @@ set(
     "include/${PROJECT_NAME}/lbfgsb.hpp"
 )
 
-if (NOT TARGET blas)
-    set(FORTRAN_SRC ${FORTRAN_SRC}
-        Lbfgsb.3.0/blas.f # Now uses external blas
-    )
-    message(WARNING "lbfgsb_cpp will use local implementation of blas functions")
-endif()
-
-add_library(${PROJECT_NAME} ${FORTRAN_SRC} ${HEADERS})
+add_library(${PROJECT_NAME} INTERFACE ${HEADERS})
 add_library(${PROJECT_NAME}::${PROJECT_NAME} ALIAS ${PROJECT_NAME})
+
+set(MAINFFPATH "${CMAKE_SOURCE_DIR}/build2/installed")
+set(lbfgsb_DIR "${MAINFFPATH}/lib/cmake/lbfgsb")
+
+find_package(lbfgsb CONFIG REQUIRED)
+#target_link_libraries(${PROJECT_NAME} lbfgsb::lbfgsb)
 
 target_include_directories(
     ${PROJECT_NAME} INTERFACE
     $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
     $<INSTALL_INTERFACE:include>
 )
-set_target_properties(${PROJECT_NAME} PROPERTIES POSITION_INDEPENDENT_CODE TRUE)
 target_compile_features(${PROJECT_NAME} INTERFACE cxx_std_11)
 
-target_compile_options(${PROJECT_NAME} PRIVATE -frecursive)
-
 if (TARGET blas)
-    target_link_libraries(${PROJECT_NAME} PUBLIC blas)
+#    target_link_libraries(${PROJECT_NAME} PUBLIC blas)
 endif()
 
 if (CMAKE_BUILD_TYPE MATCHES "Release")
 else ()
-    target_compile_options(${PROJECT_NAME} PRIVATE -fcheck=all)
+#    target_compile_options(${PROJECT_NAME} PRIVATE -fcheck=all)
 endif ()
 
 
@@ -77,6 +67,3 @@ install(
     NAMESPACE ${PROJECT_NAME}::
     DESTINATION lib/cmake/${PROJECT_NAME}
 )
-
-
-

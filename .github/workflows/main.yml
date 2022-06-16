@@ -60,6 +60,7 @@ jobs:
           mkdir build2 && cd build2
           cmake \
               -DCMAKE_Fortran_COMPILER="$(R CMD config FC | awk '{ print $1 }')" \
+              -DFLIBS="$(R CMD config FLIBS)" \
               -G "Unix Makefiles" \
               -DCMAKE_BUILD_TYPE="${MODE}" \
               ../Lbfgsb.3.0
