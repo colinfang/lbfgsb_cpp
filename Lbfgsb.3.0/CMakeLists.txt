@@ -15,6 +15,11 @@ set(FORTRAN_SRC
 )
 set(HEADERS "include/${PROJECT_NAME}/lbfgsb.h")
 
+if (NOT WIN32)
+#    Fortran write(*,*) can be re-enabled using this directive
+#    target_compile_options(${PROJECT_NAME} LBFGSB_WRITE)
+endif()
+
 if (NOT TARGET blas)
     set(FORTRAN_SRC ${FORTRAN_SRC}
             blas.f # Now uses external blas
