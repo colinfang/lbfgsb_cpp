@@ -9,7 +9,7 @@ if (CMAKE_INSTALL_PREFIX_INITIALIZED_TO_DEFAULT)
 endif ()
 
 set(FORTRAN_SRC
-    lbfgsb.f
+    lbfgsb.F
     linpack.f
     timer.f
 )
@@ -55,7 +55,7 @@ endif()
 
 if (WIN32)
     set(CMAKE_FIND_LIBRARY_SUFFIXES .a) # no .dll.a
-    list(APPEND FLIBS_LIST "-lgcc")
+    list(APPEND FLIBS_LIST "-lgcc") # required for timer
 endif()
 
 foreach(ITEM ${FLIBS_LIST})
