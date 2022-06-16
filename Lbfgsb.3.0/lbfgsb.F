@@ -1,3 +1,21 @@
+      logical function STRCMP(a, b, n)
+            use iso_c_binding
+            character a(*)      
+            character b(*)
+            integer n
+            interface
+                integer(c_int) function strncmp0(dest, src, n) bind(C)
+                   import
+                   character,  intent(in) :: dest(*)
+                   character,  intent(in)  :: src(*)
+                   integer(c_int), value, intent(in) :: n
+                 end function strncmp0
+             end interface
+             STRCMP = (strncmp0(a, b, n) == 0)
+             return
+      end function STRCMP
+#define STREQUAL(a,b) STRCMP((a),(b),len(b))
+
 c                                                                                      
 c  L-BFGS-B is released under the “New BSD License” (aka “Modified BSD License”        
 c  or “3-clause license”)                                                              
