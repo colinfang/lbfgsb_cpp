@@ -62,13 +62,7 @@ else ()
     else ()
         #    target_compile_options(${PROJECT_NAME} PRIVATE -fcheck=all)
     endif ()
-
-
-    IF (BUILD_EXAMPLE)
-        enable_testing()
-        add_subdirectory(examples)
-    ENDIF ()
-
+    
     # Create install rule for your library. Use variables CMAKE_INSTALL_*DIR defined in GNUInstallDir
     include(GNUInstallDirs)
     # https://cmake.org/cmake/help/latest/command/install.html
@@ -91,3 +85,8 @@ else ()
     )
 
 endif ()
+
+IF (BUILD_EXAMPLE)
+    enable_testing()
+    add_subdirectory(examples)
+ENDIF ()
