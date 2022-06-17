@@ -53,26 +53,15 @@ jobs:
             echo "No make command found"
           fi
 
-      - name: Lbfgsb.3.0 build
-        shell: bash
-        run: |
-          set -x
-          mkdir build2 && cd build2
-          cmake \
-              -DCMAKE_Fortran_COMPILER="$(R CMD config FC | awk '{ print $1 }')" \
-              -DFLIBS="$(R CMD config FLIBS)" \
-              -G "Unix Makefiles" \
-              -DCMAKE_BUILD_TYPE="${MODE}" \
-              ../Lbfgsb.3.0
-          cmake --build .
-          cmake --build . --target install 
-
       - name: Configure
         shell: bash
         run: |
           set -x
           mkdir build && cd build
-          cmake -DBUILD_EXAMPLE=ON \
+          cmake \
+                -DCMAKE_Fortran_COMPILER="$(R CMD config FC | awk '{ print $1 }')" \
+                -DFortran_LINK_FLAGS="$(R CMD config FLIBS)" \
+                -DBUILD_EXAMPLE=ON \
                 -DCMAKE_BUILD_TYPE="${MODE}" \
                 ..
 

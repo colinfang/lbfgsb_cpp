@@ -8,6 +8,9 @@ if (CMAKE_INSTALL_PREFIX_INITIALIZED_TO_DEFAULT)
     set(CMAKE_INSTALL_PREFIX_INITIALIZED_TO_DEFAULT FALSE CACHE BOOL "Installation prefix has been set" FORCE)
 endif ()
 
+message(STATUS "Using Fortran compiler: ${CMAKE_Fortran_COMPILER}")
+message(STATUS "Using Fortran library flags: ${Fortran_LINK_FLAGS}")
+
 set(FORTRAN_SRC
     lbfgsb.F # capital to enable pre-processing with compilation directives
     linpack.f
@@ -29,7 +32,7 @@ endif()
 
 add_library(${PROJECT_NAME} ${FORTRAN_SRC} ${HEADERS})
 
-set(FLIBS_LIST ${FLIBS})
+set(FLIBS_LIST ${Fortran_LINK_FLAGS})
 separate_arguments(FLIBS_LIST)
 
 #target_link_libraries(${PROJECT_NAME} "-Wl,--whole-archive")
