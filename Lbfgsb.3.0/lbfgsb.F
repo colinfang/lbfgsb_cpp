@@ -1,3 +1,21 @@
+      logical function STRCMP(a, b, n)
+            use iso_c_binding
+            character a(*)      
+            character b(*)
+            integer n
+            interface
+                integer(c_int) function strncmp0(dest, src, n) bind(C)
+                   import
+                   character,  intent(in) :: dest(*)
+                   character,  intent(in)  :: src(*)
+                   integer(c_int), value, intent(in) :: n
+                 end function strncmp0
+             end interface
+             STRCMP = (strncmp0(a, b, n) == 0)
+             return
+      end function STRCMP
+#define STREQUAL(a,b) STRCMP((a),(b),len(b))
+
 c                                                                                      
 c  L-BFGS-B is released under the “New BSD License” (aka “Modified BSD License”        
 c  or “3-clause license”)                                                              
@@ -235,11 +253,12 @@ c     in collaboration with R.H. Byrd, P. Lu-Chen and J. Nocedal.
 c
 c
 c     ************
+      logical STRCMP
 c-jlm-jn 
       integer   lws,lr,lz,lt,ld,lxp,lwa,
      +          lwy,lsy,lss,lwt,lwn,lsnd
 
-      if (task .eq. 'START') then
+      if (STREQUAL(task,'START')) then
          isave(1)  = m*n
          isave(2)  = m**2
          isave(3)  = 4*m**2
@@ -300,6 +319,8 @@ c-jlm-jn
      +                 wa(8*m), 
      +                 ws(n, m), wy(n, m), sy(m, m), ss(m, m), 
      +                 wt(m, m), wn(2*m, 2*m), snd(2*m, 2*m), dsave(29)
+c
+      logical strcmp
 
 c     ************
 c
@@ -494,7 +515,7 @@ c     ************
       double precision one,zero
       parameter        (one=1.0d0,zero=0.0d0)
       
-      if (task .eq. 'START') then
+      if (STREQUAL(task,'START')) then
 
          epsmch = epsilon(one)
 
@@ -547,15 +568,17 @@ c           'info' records the termination information.
          info = 0
 
          itfile = 8
+#ifdef LBFGSB_WRITE         
          if (iprint .ge. 1) then
 c                                open a summary file 'iterate.dat'
             open (8, file = 'iterate.dat', status = 'unknown')
          endif            
+#endif
 
 c        Check the input arguments for errors.
 
          call errclb(n,m,factr,l,u,nbd,task,info,k)
-         if (task(1:5) .eq. 'ERROR') then
+         if (STREQUAL(task,'ERROR')) then
             call prn3lb(n,x,f,task,iprint,info,itfile,
      +                  iter,nfgv,nintol,nskip,nact,sbgnrm,
      +                  zero,nseg,word,iback,stp,xstep,k,
@@ -618,11 +641,11 @@ c          restore local variables.
 c        After returning from the driver go to the point where execution
 c        is to resume.
 
-         if (task(1:5) .eq. 'FG_LN') goto 666
-         if (task(1:5) .eq. 'NEW_X') goto 777
-         if (task(1:5) .eq. 'FG_ST') goto 111
-         if (task(1:4) .eq. 'STOP') then
-            if (task(7:9) .eq. 'CPU') then
+         if (STREQUAL(task,'FG_LN')) goto 666
+         if (STREQUAL(task,'NEW_X')) goto 777
+         if (STREQUAL(task,'FG_ST')) goto 111
+         if (STREQUAL(task,'STOP')) then
+            if (STREQUAL(task(7:9),'CPU')) then
 c                                          restore the previous iterate.
                call dcopy(n,t,1,x,1)
                call dcopy(n,r,1,g,1)
@@ -644,10 +667,12 @@ c     Compute the infinity norm of the (-) projected gradient.
  
       call projgr(n,l,u,nbd,x,g,sbgnrm)
   
+#ifdef LBFGSB_WRITE
       if (iprint .ge. 1) then
          write (6,1002) iter,f,sbgnrm
          write (itfile,1003) iter,nfgv,sbgnrm,f
       endif
+#endif
       if (sbgnrm .le. pgtol) then
 c                                terminate the algorithm.
          task = 'CONVERGENCE: NORM_OF_PROJECTED_GRADIENT_<=_PGTOL'
@@ -657,7 +682,9 @@ c                                terminate the algorithm.
 c ----------------- the beginning of the loop --------------------------
  
  222  continue
+#ifdef LBFGSB_WRITE
       if (iprint .ge. 99) write (6,1001) iter + 1
+#endif      
       iword = -1
 c
       if (.not. cnstnd .and. col .gt. 0) then 
@@ -681,7 +708,9 @@ cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
      +            iprint, sbgnrm, info, epsmch)
       if (info .ne. 0) then 
 c         singular triangular system detected; refresh the lbfgs memory.
+#ifdef LBFGSB_WRITE
          if(iprint .ge. 1) write (6, 1005)
+#endif
          info   = 0
          col    = 0
          head   = 1
@@ -729,7 +758,9 @@ c                     [ 0  I]
       if (info .ne. 0) then
 c          nonpositive definiteness in Cholesky factorization;
 c          refresh the lbfgs memory and restart the iteration.
+#ifdef LBFGSB_WRITE
          if(iprint .ge. 1) write (6, 1006)
+#endif
          info   = 0
          col    = 0
          head   = 1
@@ -755,7 +786,9 @@ c-jlm-jn   call the direct method.
       if (info .ne. 0) then 
 c          singular triangular system detected;
 c          refresh the lbfgs memory and restart the iteration.
+#ifdef LBFGSB_WRITE
          if(iprint .ge. 1) write (6, 1005)
+#endif
          info   = 0
          col    = 0
          head   = 1
@@ -806,7 +839,9 @@ c                restore the actual number of f and g evaluations etc.
             goto 999
          else
 c             refresh the lbfgs memory and restart the iteration.
+#ifdef LBFGSB_WRITE
             if(iprint .ge. 1) write (6, 1008)
+#endif
             if (info .eq. 0) nfgv = nfgv - 1
             info   = 0
             col    = 0
@@ -819,7 +854,7 @@ c             refresh the lbfgs memory and restart the iteration.
             lnscht = lnscht + cpu2 - cpu1
             goto 222
          endif
-      else if (task(1:5) .eq. 'FG_LN') then
+      else if (STREQUAL(task,'FG_LN')) then
 c          return to the driver for calculating f and g; reenter at 666.
          goto 1000
       else 
@@ -876,7 +911,9 @@ c     Compute d=newx-oldx, r=newg-oldg, rr=y'y and dr=y's.
 c                            skip the L-BFGS update.
          nskip = nskip + 1
          updatd = .false.
+#ifdef LBFGSB_WRITE
          if (iprint .ge. 1) write (6,1004) dr, ddum
+#endif
          goto 888
       endif 
  
@@ -904,7 +941,9 @@ c           J' stored in the upper triangular of wt.
       if (info .ne. 0) then 
 c          nonpositive definiteness in Cholesky factorization;
 c          refresh the lbfgs memory and restart the iteration.
+#ifdef LBFGSB_WRITE
          if(iprint .ge. 1) write (6, 1007)
+#endif
          info = 0
          col = 0
          head = 1
@@ -976,6 +1015,7 @@ c     Save local variables.
       dsave(15) = gdold
       dsave(16) = dtd  
 
+#ifdef LBFGSB_WRITE
  1001 format (//,'ITERATION ',i5)
  1002 format
      +  (/,'At iterate',i5,4x,'f= ',1p,d12.5,4x,'|proj g|= ',1p,d12.5)
@@ -994,6 +1034,7 @@ c     Save local variables.
  1008 format (/, 
      +' Bad direction in the line search;',/,
      +'   refresh the lbfgs memory and restart the iteration.')
+#endif
 
       return   
 
@@ -1086,6 +1127,7 @@ c                   this variable is always fixed
          endif
   20  continue
 
+#ifdef LBFGSB_WRITE
       if (iprint .ge. 0) then
          if (prjctd) write (6,*)
      +   'The initial X is infeasible.  Restart with its projection.'
@@ -1096,6 +1138,7 @@ c                   this variable is always fixed
       if (iprint .gt. 0) write (6,1001) nbdd
 
  1001 format (/,'At X0 ',i9,' variables are exactly at the bounds') 
+#endif
 
       return
 
@@ -1421,7 +1464,9 @@ c       compute the Cauchy direction d and the breakpoints t; initialize
 c       the derivative f1 and the vector p = W'd (for theta = 1).
  
       if (sbgnrm .le. zero) then
+#ifdef LBFGSB_WRITE
          if (iprint .ge. 0) write (6,*) 'Subgnorm = 0.  GCP = X.'
+#endif
          call dcopy(n,x,1,xcp,1)
          return
       endif 
@@ -1432,7 +1477,9 @@ c       the derivative f1 and the vector p = W'd (for theta = 1).
       bkmin = zero
       col2 = 2*col
       f1 = zero
+#ifdef LBFGSB_WRITE
       if (iprint .ge. 99) write (6,3010)
+#endif
 
 c     We set p to zero and build it up as we determine d.
 
@@ -1522,7 +1569,9 @@ c     Initialize GCP xcp = x.
 
       if (nbreak .eq. 0 .and. nfree .eq. n + 1) then
 c                  is a zero vector, return with the initial xcp as GCP.
+#ifdef LBFGSB_WRITE
          if (iprint .gt. 100) write (6,1010) (xcp(i), i = 1, n)
+#endif
          return
       endif    
  
@@ -1544,9 +1593,11 @@ c     Initialize derivative f2.
       dtm = -f1/f2
       tsum = zero
       nseg = 1
+#ifdef LBFGSB_WRITE
       if (iprint .ge. 99) 
      +   write (6,*) 'There are ',nbreak,'  breakpoints '
- 
+#endif
+
 c     If there are no breakpoints, locate the GCP and return. 
  
       if (nbreak .eq. 0) goto 888
@@ -1589,11 +1640,13 @@ c           (if iter=2, initialize heap).
          
       dt = tj - tj0
  
+#ifdef LBFGSB_WRITE
       if (dt .ne. zero .and. iprint .ge. 100) then
          write (6,4011) nseg,f1,f2
          write (6,5010) dt
          write (6,6010) dtm
       endif          
+#endif
  
 c     If a minimizer is within this interval, locate the GCP and return. 
  
@@ -1616,7 +1669,9 @@ c       reset the corresponding component of d to zero.
          xcp(ibp) = l(ibp)
          iwhere(ibp) = 1
       endif
+#ifdef LBFGSB_WRITE
       if (iprint .ge. 100) write (6,*) 'Variable  ',ibp,'  is fixed.'
+#endif
       if (nleft .eq. 0 .and. nbreak .eq. n) then
 c                                             all n variables are fixed,
 c                                                return with xcp as GCP.
@@ -1679,12 +1734,14 @@ c                 to repeat the loop for unsearched intervals.
 c------------------- the end of the loop -------------------------------
  
  888  continue
+#ifdef LBFGSB_WRITE
       if (iprint .ge. 99) then
          write (6,*)
          write (6,*) 'GCP found in this segment'
          write (6,4010) nseg,f1,f2
          write (6,6010) dtm
-      endif 
+      endif
+#endif
       if (dtm .le. zero) dtm = zero
       tsum = tsum + dtm
  
@@ -1699,6 +1756,7 @@ c     Update c = c + dtm*p = W'(x^c - x)
 c       which will be used in computing r = Z'(B(x^c - x) + g).
  
       if (col .gt. 0) call daxpy(col2,dtm,p,1,c,1)
+#ifdef LBFGSB_WRITE
       if (iprint .gt. 100) write (6,1010) (xcp(i),i = 1,n)
       if (iprint .ge. 99) write (6,2010)
 
@@ -1710,7 +1768,8 @@ c       which will be used in computing r = Z'(B(x^c - x) + g).
      +        1p,2(1x,d11.4))
  5010 format ('Distance to the next break point =  ',1p,d11.4)
  6010 format ('Distance to the stationary point =  ',1p,d11.4) 
- 
+#endif
+
       return
  
       end
@@ -2298,8 +2357,10 @@ c            write(6,*) ' index = ', i
             if (iwhere(k) .gt. 0) then
                ileave = ileave - 1
                indx2(ileave) = k
+#ifdef LBFGSB_WRITE
                if (iprint .ge. 100) write (6,*)
      +             'Variable ',k,' leaves the set of free variables'
+#endif
             endif
   20     continue
          do 22 i = 1 + nfree, n
@@ -2307,12 +2368,16 @@ c            write(6,*) ' index = ', i
             if (iwhere(k) .le. 0) then
                nenter = nenter + 1
                indx2(nenter) = k
+#ifdef LBFGSB_WRITE
                if (iprint .ge. 100) write (6,*)
      +             'Variable ',k,' enters the set of free variables'
+#endif
             endif
   22     continue
+#ifdef LBFGSB_WRITE  
          if (iprint .ge. 99) write (6,*)
      +       n+1-ileave,' variables leave; ',nenter,' variables enter'
+#endif
       endif
       wrk = (ileave .lt. n+1) .or. (nenter .gt. 0) .or. updatd
  
@@ -2329,8 +2394,10 @@ c     Find the index set of free and active variables at the GCP.
             index(iact) = i
          endif
   24  continue
+#ifdef LBFGSB_WRITE  
       if (iprint .ge. 99) write (6,*)
      +      nfree,' variables are free at GCP ',iter + 1  
+#endif
 
       return
 
@@ -2495,8 +2562,10 @@ c     **********
       parameter        (one=1.0d0,zero=0.0d0,big=1.0d+10)
       double precision ftol,gtol,xtol
       parameter        (ftol=1.0d-3,gtol=0.9d0,xtol=0.1d0)
+c
+      logical strcmp
 
-      if (task(1:5) .eq. 'FG_LN') goto 556
+      if (STREQUAL(task,'FG_LN')) goto 556
 
       dtd = ddot(n,d,1,d,1)
       dnorm = sqrt(dtd)
@@ -2550,7 +2619,9 @@ c     Determine the maximum step length.
          if (gd .ge. zero) then
 c                               the directional derivative >=0.
 c                               Line search is impossible.
+#ifdef LBFGSB_WRITE
             write(6,*)' ascent direction in projection gd = ', gd
+#endif
             info = -4
             return
          endif
@@ -2559,7 +2630,8 @@ c                               Line search is impossible.
       call dcsrch(f,gd,stp,ftol,gtol,xtol,zero,stpmx,csave,isave,dsave)
 
       xstep = stp*dnorm
-      if (csave(1:4) .ne. 'CONV' .and. csave(1:4) .ne. 'WARN') then
+      if ((.not. STREQUAL(csave,'CONV')) 
+     +     .and. (.not. STREQUAL(csave,'WARN'))) then
          task = 'FG_LNSRCH'
          ifun = ifun + 1
          nfgv = nfgv + 1
@@ -2696,6 +2768,7 @@ c     ************
 
       integer i
 
+#ifdef LBFGSB_WRITE
       if (iprint .ge. 0) then
          write (6,7001) epsmch
          write (6,*) 'N = ',n,'    M = ',m
@@ -2732,6 +2805,7 @@ c     ************
      + 'Machine precision =',1p,d10.3)
  9001 format (/,3x,'it',3x,'nf',2x,'nseg',2x,'nact',2x,'sub',2x,'itls',
      +        2x,'stepl',4x,'tstep',5x,'projg',8x,'f')
+#endif
 
       return
 
@@ -2783,23 +2857,31 @@ c                             the truncated Newton step has been used.
          word = '---'
       endif
       if (iprint .ge. 99) then
+#ifdef LBFGSB_WRITE
          write (6,*) 'LINE SEARCH',iback,' times; norm of step = ',xstep
          write (6,2001) iter,f,sbgnrm
          if (iprint .gt. 100) then      
             write (6,1004) 'X =',(x(i), i = 1, n)
             write (6,1004) 'G =',(g(i), i = 1, n)
          endif
+#endif
       else if (iprint .gt. 0) then 
          imod = mod(iter,iprint)
+#ifdef LBFGSB_WRITE
          if (imod .eq. 0) write (6,2001) iter,f,sbgnrm
+#endif         
       endif
+#ifdef LBFGSB_WRITE      
       if (iprint .ge. 1) write (itfile,3001)
      +          iter,nfgv,nseg,nact,word,iback,stp,xstep,sbgnrm,f
+#endif
 
+#ifdef LBFGSB_WRITE
  1004 format (/,a4, 1p, 6(1x,d11.4),/,(4x,1p,6(1x,d11.4)))
  2001 format
      +  (/,'At iterate',i5,4x,'f= ',1p,d12.5,4x,'|proj g|= ',1p,d12.5)
  3001 format(2(1x,i4),2(1x,i5),2x,a3,1x,i4,1p,2(2x,d7.1),1p,2(1x,d10.3))
+#endif
 
       return
 
@@ -2840,10 +2922,13 @@ c
 c
 c     ************
 
+c
+      logical strcmp
       integer i
 
-      if (task(1:5) .eq. 'ERROR') goto 999
+      if (STREQUAL(task,'ERROR')) goto 999
 
+#ifdef LBFGSB_WRITE
       if (iprint .ge. 0) then
          write (6,3003)
          write (6,3004)
@@ -2853,7 +2938,9 @@ c     ************
          endif  
          if (iprint .ge. 1) write (6,*) ' F =',f
       endif 
+#endif
  999  continue
+#ifdef LBFGSB_WRITE
       if (iprint .ge. 0) then
          write (6,3009) task
          if (info .ne. 0) then
@@ -2888,7 +2975,9 @@ c     ************
             write (itfile,3008) time
          endif
       endif
+#endif
 
+#ifdef LBFGSB_WRITE
  1004 format (/,a4, 1p, 6(1x,d11.4),/,(4x,1p,6(1x,d11.4)))
  3002 format(2(1x,i4),2(1x,i5),2x,a3,1x,i4,1p,2(2x,d7.1),6x,'-',10x,'-')
  3003 format (/,
@@ -2932,6 +3021,7 @@ c     ************
      +,'  and gradient evaluations.  Previous x, f and g restored.',/,
      +' Possible causes: 1 error in function or gradient evaluation;',/,
      +'                  2 rounding error dominate computation.')
+#endif
 
       return
 
@@ -3186,7 +3276,9 @@ c
       double precision dd_p
 
       if (nsub .le. 0) return
+#ifdef LBFGSB_WRITE
       if (iprint .ge. 99) write (6,1001)
+#endif
 
 c     Compute wv = W'Zd.
 
@@ -3279,8 +3371,10 @@ c
  55   continue
       if ( dd_p .gt.zero ) then
          call dcopy( n, xp, 1, x, 1 )
+#ifdef LBFGSB_WRITE
          write(6,*) ' Positive dir derivative in projection '
          write(6,*) ' Using the backtracking step '
+#endif
       else
          go to 911
       endif
@@ -3334,10 +3428,12 @@ c
 cccccc
  911  continue
 
+#ifdef LBFGSB_WRITE
       if (iprint .ge. 99) write (6,1004)
 
  1001 format (/,'----------------SUBSM entered-----------------',/)
  1004 format (/,'----------------exit SUBSM --------------------',/)
+#endif
 
       return
 
@@ -3491,10 +3587,12 @@ c     **********
       integer stage
       double precision finit,ftest,fm,fx,fxm,fy,fym,ginit,gtest,
      +       gm,gx,gxm,gy,gym,stx,sty,stmin,stmax,width,width1
+c
+      logical strcmp
 
 c     Initialization block.
 
-      if (task(1:5) .eq. 'START') then
+      if (STREQUAL(task,'START')) then
 
 c        Check the input arguments for errors.
 
@@ -3509,7 +3607,7 @@ c        Check the input arguments for errors.
 
 c        Exit if there are errors on input.
 
-         if (task(1:5) .eq. 'ERROR') return
+         if (STREQUAL(task,'ERROR')) return
 
 c        Initialize local variables.
 
@@ -3591,7 +3689,8 @@ c     Test for convergence.
 
 c     Test for termination.
 
-      if (task(1:4) .eq. 'WARN' .or. task(1:4) .eq. 'CONV') goto 1000
+      if (STREQUAL(task,'WARN') 
+     +    .or. STREQUAL(task,'CONV')) goto 1000
 
 c     A modified function is used to predict the step during the
 c     first stage if a lower function value has been obtained but 
