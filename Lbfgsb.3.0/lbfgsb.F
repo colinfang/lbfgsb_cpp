@@ -1,20 +1,28 @@
-      logical function STRCMP(a, b, n)
+! With STRNCMP_IMPL external function will be used to replaced native string comparaison
+! On Windows system, MinGW grabs a lot of libraries like Unwinding, pthread... juste for this. 
+! These extra libraries are problematic with MSVC to link the code as a fortran-agnostic library
+!
+! replace strncmp by strncmp_debug to use debug mode using implementation done 
+! in strncmp_debug.cpp and used in example.cpp
+#define STRNCMP_IMPL strncmp
+      logical function STARTWITH_N(a, b, n)
             use iso_c_binding
             character a(*)      
             character b(*)
             integer n
             interface
-                integer(c_int) function strncmp0(dest, src, n) bind(C)
+                integer(c_int) function STRNCMP_IMPL(dest, src, n) 
+     +             bind(C)
                    import
                    character,  intent(in) :: dest(*)
                    character,  intent(in)  :: src(*)
                    integer(c_int), value, intent(in) :: n
-                 end function strncmp0
+                 end function STRNCMP_IMPL
              end interface
-             STRCMP = (strncmp0(a, b, n) == 0)
+             STARTWITH_N = (STRNCMP_IMPL(a, b, n) == 0)
              return
-      end function STRCMP
-#define STREQUAL(a,b) STRCMP((a),(b),len(b))
+      end function STARTWITH_N
+#define STARTWITH(a,b) STARTWITH_N((a),(b),len(b))
 
 c                                                                                      
 c  L-BFGS-B is released under the “New BSD License” (aka “Modified BSD License”        
@@ -253,12 +261,12 @@ c     in collaboration with R.H. Byrd, P. Lu-Chen and J. Nocedal.
 c
 c
 c     ************
-      logical STRCMP
+      logical STARTWITH_N
 c-jlm-jn 
       integer   lws,lr,lz,lt,ld,lxp,lwa,
      +          lwy,lsy,lss,lwt,lwn,lsnd
 
-      if (STREQUAL(task,'START')) then
+      if (STARTWITH(task,'START')) then
          isave(1)  = m*n
          isave(2)  = m**2
          isave(3)  = 4*m**2
@@ -320,7 +328,7 @@ c-jlm-jn
      +                 ws(n, m), wy(n, m), sy(m, m), ss(m, m), 
      +                 wt(m, m), wn(2*m, 2*m), snd(2*m, 2*m), dsave(29)
 c
-      logical strcmp
+      logical STARTWITH_N
 
 c     ************
 c
@@ -515,7 +523,7 @@ c     ************
       double precision one,zero
       parameter        (one=1.0d0,zero=0.0d0)
       
-      if (STREQUAL(task,'START')) then
+      if (STARTWITH(task,'START')) then
 
          epsmch = epsilon(one)
 
@@ -578,7 +586,7 @@ c                                open a summary file 'iterate.dat'
 c        Check the input arguments for errors.
 
          call errclb(n,m,factr,l,u,nbd,task,info,k)
-         if (STREQUAL(task,'ERROR')) then
+         if (STARTWITH(task,'ERROR')) then
             call prn3lb(n,x,f,task,iprint,info,itfile,
      +                  iter,nfgv,nintol,nskip,nact,sbgnrm,
      +                  zero,nseg,word,iback,stp,xstep,k,
@@ -641,11 +649,11 @@ c          restore local variables.
 c        After returning from the driver go to the point where execution
 c        is to resume.
 
-         if (STREQUAL(task,'FG_LN')) goto 666
-         if (STREQUAL(task,'NEW_X')) goto 777
-         if (STREQUAL(task,'FG_ST')) goto 111
-         if (STREQUAL(task,'STOP')) then
-            if (STREQUAL(task(7:9),'CPU')) then
+         if (STARTWITH(task,'FG_LN')) goto 666
+         if (STARTWITH(task,'NEW_X')) goto 777
+         if (STARTWITH(task,'FG_ST')) goto 111
+         if (STARTWITH(task,'STOP')) then
+            if (STARTWITH(task(7:9),'CPU')) then
 c                                          restore the previous iterate.
                call dcopy(n,t,1,x,1)
                call dcopy(n,r,1,g,1)
@@ -854,7 +862,7 @@ c             refresh the lbfgs memory and restart the iteration.
             lnscht = lnscht + cpu2 - cpu1
             goto 222
          endif
-      else if (STREQUAL(task,'FG_LN')) then
+      else if (STARTWITH(task,'FG_LN')) then
 c          return to the driver for calculating f and g; reenter at 666.
          goto 1000
       else 
@@ -2563,9 +2571,9 @@ c     **********
       double precision ftol,gtol,xtol
       parameter        (ftol=1.0d-3,gtol=0.9d0,xtol=0.1d0)
 c
-      logical strcmp
+      logical STARTWITH_N
 
-      if (STREQUAL(task,'FG_LN')) goto 556
+      if (STARTWITH(task,'FG_LN')) goto 556
 
       dtd = ddot(n,d,1,d,1)
       dnorm = sqrt(dtd)
@@ -2630,8 +2638,8 @@ c                               Line search is impossible.
       call dcsrch(f,gd,stp,ftol,gtol,xtol,zero,stpmx,csave,isave,dsave)
 
       xstep = stp*dnorm
-      if ((.not. STREQUAL(csave,'CONV')) 
-     +     .and. (.not. STREQUAL(csave,'WARN'))) then
+      if ((.not. STARTWITH(csave,'CONV')) 
+     +     .and. (.not. STARTWITH(csave,'WARN'))) then
          task = 'FG_LNSRCH'
          ifun = ifun + 1
          nfgv = nfgv + 1
@@ -2923,10 +2931,10 @@ c
 c     ************
 
 c
-      logical strcmp
+      logical STARTWITH_N
       integer i
 
-      if (STREQUAL(task,'ERROR')) goto 999
+      if (STARTWITH(task,'ERROR')) goto 999
 
 #ifdef LBFGSB_WRITE
       if (iprint .ge. 0) then
@@ -3588,11 +3596,11 @@ c     **********
       double precision finit,ftest,fm,fx,fxm,fy,fym,ginit,gtest,
      +       gm,gx,gxm,gy,gym,stx,sty,stmin,stmax,width,width1
 c
-      logical strcmp
+      logical STARTWITH_N
 
 c     Initialization block.
 
-      if (STREQUAL(task,'START')) then
+      if (STARTWITH(task,'START')) then
 
 c        Check the input arguments for errors.
 
@@ -3607,7 +3615,7 @@ c        Check the input arguments for errors.
 
 c        Exit if there are errors on input.
 
-         if (STREQUAL(task,'ERROR')) return
+         if (STARTWITH(task,'ERROR')) return
 
 c        Initialize local variables.
 
@@ -3689,8 +3697,8 @@ c     Test for convergence.
 
 c     Test for termination.
 
-      if (STREQUAL(task,'WARN') 
-     +    .or. STREQUAL(task,'CONV')) goto 1000
+      if (STARTWITH(task,'WARN') 
+     +    .or. STARTWITH(task,'CONV')) goto 1000
 
 c     A modified function is used to predict the step during the
 c     first stage if a lower function value has been obtained but 

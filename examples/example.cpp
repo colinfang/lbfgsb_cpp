@@ -10,18 +10,6 @@
 #include <iostream>
 #include <lbfgsb_cpp/lbfgsb.hpp>
 
-// For monitoring behavior of string compare replacement
-#include <cstring>
-extern "C" {
-int strncmp0(const char* s1, const char* s2, int n) {
-  std::cout << "Print from strcmp0\n";
-  std::cout << "  arg1: " << s1 << "\n";
-  std::cout << "  arg2: " << s2 << "\n";
-  std::cout << "  arg3: " << n << "\n";
-  return strncmp(s1, s2, n);
-}
-}
-
 using namespace lbfgsb;
 
 double get_objective(const std::array<double, 2>& x, std::array<double, 2>& grad) {

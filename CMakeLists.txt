@@ -6,12 +6,6 @@ set(CMAKE_CXX_STANDARD 17)
 option(BUILD_EXAMPLE "Build example" OFF)
 
 set(
-    FORTRAN_SRC
-    Lbfgsb.3.0/lbfgsb.f
-    Lbfgsb.3.0/linpack.f
-    Lbfgsb.3.0/timer.f
-)
-set(
     HEADERS
     "include/${PROJECT_NAME}/lbfgsb.hpp"
 )

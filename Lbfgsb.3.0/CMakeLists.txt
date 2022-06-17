@@ -9,7 +9,7 @@ if (CMAKE_INSTALL_PREFIX_INITIALIZED_TO_DEFAULT)
 endif ()
 
 set(FORTRAN_SRC
-    lbfgsb.F
+    lbfgsb.F # capital to enable pre-processing with compilation directives
     linpack.f
     timer.f
 )
